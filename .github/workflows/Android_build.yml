@@ -51,11 +51,11 @@ jobs:
         run: |
           cargo build --release \
             --target aarch64-linux-android \
-            --bin wifi-densepose-sensing-server
+            --bin sensing-server
 
       - name: Rename binary
         run: |
-          cp rust-port/wifi-densepose-rs/target/aarch64-linux-android/release/wifi-densepose-sensing-server \
+          cp rust-port/wifi-densepose-rs/target/aarch64-linux-android/release/sensing-server \
              ruview-server-android-arm64
 
       - name: Upload binary as artifact
