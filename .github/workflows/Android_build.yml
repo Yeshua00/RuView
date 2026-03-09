@@ -20,13 +20,23 @@ jobs:
         with:
           targets: aarch64-linux-android
 
-      - name: Install Android NDK
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK and NDK
         uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: sdkmanager "ndk;27.0.12077973"
 
       - name: Configure NDK linker
         run: |
+          NDK_PATH=$ANDROID_SDK_ROOT/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/bin
+          echo "NDK_BIN=$NDK_PATH" >> $GITHUB_ENV
           mkdir -p ~/.cargo
-          NDK_PATH=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
           echo "[target.aarch64-linux-android]" >> ~/.cargo/config.toml
           echo "linker = \"$NDK_PATH/aarch64-linux-android35-clang\"" >> ~/.cargo/config.toml
           echo "ar = \"$NDK_PATH/llvm-ar\"" >> ~/.cargo/config.toml
@@ -45,7 +55,7 @@ jobs:
       - name: Build sensing server for Android ARM64
         working-directory: rust-port/wifi-densepose-rs
         env:
-          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: ${{ env.ANDROID_NDK_HOME }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang
+          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: ${{ env.NDK_BIN }}/aarch64-linux-android35-clang
           OPENSSL_STATIC: 1
           OPENSSL_NO_VENDOR: 0
         run: |
