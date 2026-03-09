@@ -1,0 +1,66 @@
+name: Build RuView for Android ARM64
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-android-arm64:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Install Android NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Configure NDK linker
+        run: |
+          mkdir -p ~/.cargo
+          NDK_PATH=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
+          echo "[target.aarch64-linux-android]" >> ~/.cargo/config.toml
+          echo "linker = \"$NDK_PATH/aarch64-linux-android35-clang\"" >> ~/.cargo/config.toml
+          echo "ar = \"$NDK_PATH/llvm-ar\"" >> ~/.cargo/config.toml
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust-port/wifi-densepose-rs/target
+          key: ${{ runner.os }}-cargo-android-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-android-
+
+      - name: Build sensing server for Android ARM64
+        working-directory: rust-port/wifi-densepose-rs
+        env:
+          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: ${{ env.ANDROID_NDK_HOME }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang
+          OPENSSL_STATIC: 1
+          OPENSSL_NO_VENDOR: 0
+        run: |
+          cargo build --release \
+            --target aarch64-linux-android \
+            --bin wifi-densepose-sensing-server
+
+      - name: Rename binary
+        run: |
+          cp rust-port/wifi-densepose-rs/target/aarch64-linux-android/release/wifi-densepose-sensing-server \
+             ruview-server-android-arm64
+
+      - name: Upload binary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruview-server-android-arm64
+          path: ruview-server-android-arm64
+          retention-days: 30
